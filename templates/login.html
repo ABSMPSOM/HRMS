@@ -8,30 +8,31 @@
     <script>
         tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
     </script>
-    <style>body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }</style>
+    
 </head>
-<body class="bg-darkBg min-h-screen flex items-center justify-center">
+<body class="min-h-screen flex items-center justify-end bg-cover bg-center px-16"
+        style="background-image: url('{{ url_for('static', filename='images/login_bg.png') }}'); background-size: cover; background-position: right; background-repeat: no-repeat;">
 
-    <div class="auth-card bg-cardBg p-8 rounded-lg border border-gray-700 shadow-xl w-full max-w-md">
-        <div class="bg-gray-800 text-center py-3 rounded mb-6 text-sm font-semibold tracking-wider">
-            APP/WEB LOGO
+    <div class="auth-card bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-white/20 shadow-2xl w-[550px] h-[700px] mr-10">
+        <div >
+            <img src="{{url_for('static',filename='images/login_logo.png')}}" alt="HRMS Logo" class="mx-auto mb-2 w-[180px] h-auto rounded-full" >
         </div>
         
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <div class="bg-red-500 text-white text-xs p-2 rounded mb-4 text-center">
+                <div class="bg-red-500 text-white text-xs p-2 rounded mb-8 text-center">
                     {{ messages[0] }}
                 </div>
             {% endif %}
         {% endwith %}
 
         <form action="{{ url_for('login') }}" method="POST">
-            <div class="mb-4">
+            <div class="mb-8">
                 <label class="block text-xs text-gray-400 mb-1">Email / Login ID :-</label>
                 <input type="email" name="email" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple" placeholder="admin@company.com">
             </div>
-            <div class="mb-6">
+            <div class="mb-10">
                 <label class="block text-xs text-gray-400 mb-1">
                     Password :-
                 </label>
