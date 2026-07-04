@@ -9,9 +9,16 @@
         body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .app-section, .sub-tab-content { display: none; }
         .app-section.active, .sub-tab-content.active { display: block; }
-        .form-control { background-color: #2a2a2a; color: white; border: 1px solid #444; }
-        .form-control:focus { border-color: #b244d4; box-shadow: none; background-color: #333; }
+        
+        /* Form inputs dark mode with color-scheme */
+        .form-control, .form-select { background-color: #2a2a2a; color: white; border: 1px solid #444; color-scheme: dark; }
+        .form-control:focus, .form-select:focus { border-color: #b244d4; box-shadow: none; background-color: #333; }
         .dropdown-menu-dark { background-color: #1e1e1e; border: 1px solid #444; }
+        
+        /* Dark Mode Modal Fixes */
+        .modal-content { background-color: #1e1e1e; color: white; border: 1px solid #333; }
+        .modal-header { border-bottom: 1px solid #333; }
+        .modal-footer { border-top: 1px solid #333; }
     </style>
 </head>
 <body class="bg-[#121212] min-h-screen">
@@ -218,8 +225,8 @@
                         {% for record in attendance %}
                         <tr class="hover:bg-gray-800 transition">
                             <td class="px-4 py-3">{{ record.date.strftime('%Y-%m-%d') }}</td>
-                            <td class="px-4 py-3">{{ record.check_in.strftime('%H:%M') if record.check_in else '-' }}</td>
-                            <td class="px-4 py-3">{{ record.check_out.strftime('%H:%M') if record.check_out else '-' }}</td>
+                            <td class="px-4 py-3">{{ record.check_in.strftime('%I:%M %p') if record.check_in else '-' }}</td>
+                            <td class="px-4 py-3">{{ record.check_out.strftime('%I:%M %p') if record.check_out else '-' }}</td>
                         </tr>
                         {% else %}
                         <tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">No records found.</td></tr>
