@@ -5,6 +5,7 @@
     <title>HRMS - Sign In</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script>
         tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
     </script>
@@ -13,7 +14,7 @@
 <body class="min-h-screen flex items-center justify-end bg-cover bg-center px-16"
         style="background-image: url('{{ url_for('static', filename='images/login_bg.png') }}'); background-size: cover; background-position: right; background-repeat: no-repeat;">
 
-    <div class="auth-card bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-white/20 shadow-2xl w-[550px] h-[700px] mr-10">
+    <div class="auth-card bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-white/20 shadow-2xl w-[550px] h-auto mr-10">
         <div >
             <img src="{{url_for('static',filename='images/login_logo.png')}}" alt="HRMS Logo" class="mx-auto mb-2 w-[180px] h-auto rounded-full" >
         </div>
@@ -30,7 +31,7 @@
         <form action="{{ url_for('login') }}" method="POST">
             <div class="mb-8">
                 <label class="block text-xs text-gray-400 mb-1">Email / Login ID :-</label>
-                <input type="email" name="email" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple" placeholder="admin@company.com">
+                <input type="email" name="email" required class="w-full bg-white/5 border border-gray-500 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brandPurple transition-all duration-300">
             </div>
             <div class="mb-10">
                 <label class="block text-xs text-gray-400 mb-1">
@@ -43,7 +44,7 @@
                         id="password"
                         name="password"
                         required
-                        class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 pr-10 text-white focus:outline-none focus:border-brandPurple">
+                        class="w-full bg-white/5 border border-gray-500 rounded-lg px-4 py-3 pr-12 text-white focus:outline-none focus:border-brandPurple transition-all duration-300">
 
                         <button
                             type="button"
@@ -54,22 +55,32 @@
 
                         </button>
                 </div>
-            <div class="flex items-center justify-between mb-6">
-                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+            </div>
+            <div class="flex items-center justify-between mb-8">
+
+                <label class="flex items-center gap-3 cursor-pointer group">
+
                     <input
                         type="checkbox"
                         name="remember"
-                        class="w-4 h-4 accent-brandPurple rounded">
+                        class="w-5 h-5 rounded accent-purple-500 cursor-pointer">
 
-                        Remember Me
+                        <span class="text-sm text-gray-300 group-hover:text-white transition">
+                            Remember Me
+                        </span>
+
                 </label>
 
-                <a href="{{ url_for('forgot_password') }}"
-                    class="text-sm text-brandPurple hover:text-purple-300 transition">
+                <a
+                    href="{{ url_for('forgot_password') }}"
+                    class="text-sm text-purple-300 hover:text-white hover:underline transition">
+
                     Forgot Password?
+
                 </a>
+
             </div>
-            <button type="submit" class="w-full bg-brandPurple hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+            <button type="submit" class="w-full bg-brandPurple hover:bg-purple-700 text-white font-bold py-3 px-4 rounded transition duration-200 hover:scale-[1.02] transition-all duration-300">
                 SIGN IN
             </button>
             
@@ -79,24 +90,17 @@
         </form>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <script>
-        gsap.from(".auth-card", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
-    </script>
-    <script>
-        const password = document.getElementById("password");
-        const togglePassword = document.getElementById("togglePassword");
-        const eyeIcon = document.getElementById("eyeIcon");
-            
-        togglePassword.addEventListener("click", () => {
-            if (password.type === "password") {
-                password.type = "text";
-                eyeIcon.classList.replace("fa-eye", "fa-eye-slash");
-            } else {
-                password.type = "password";
-                eyeIcon.classList.replace("fa-eye-slash", "fa-eye");
-            }
+        gsap.from(".auth-card", {
+            x: 100,
+            opacity: 0,
+            scale: 0.95,
+            duration: 1,
+            ease: "power4.out"
         });
     </script>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 </body>
 </html>

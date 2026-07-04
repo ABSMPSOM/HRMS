@@ -3,13 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>HRMS - Sign Up</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script>
-        tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: "#121212",
+                        cardBg: "#1e1e1e",
+                        brandPurple: "#b244d4"
+                    }
+                }
+            }
+        }
     </script>
+
     <style>body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; }</style>
+
 </head>
-<body class="bg-darkBg min-h-screen flex items-center justify-center">
+
+
+<body class="min-h-screen flex items-center justify-end bg-cover bg-center px-16"
+style="background-image:url('{{ url_for('static', filename='images/login_bg.png') }}');">
+
+    <div class="auth-card bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl w-[550px] p-8 mr-10">
+
+    <!-- Logo -->
+
+    <div class="text-center mb-8">
+
+        <img
+        src="{{ url_for('static', filename='images/login_logo.png') }}"
+        alt="HRMS Logo"
+        class="mx-auto w-[170px] h-auto rounded-full">
+
+    </div>
+
+    <!-- Flash -->
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="bg-yellow-500 text-black text-center rounded p-2 mb-5 text-sm">
+                {{ messages[0] }}
 
     <div class="auth-card bg-cardBg p-8 rounded-lg border border-gray-700 shadow-xl w-full max-w-md my-8">
         <div class="bg-gray-800 text-center py-3 rounded mb-6 text-sm font-semibold tracking-wider">
@@ -65,20 +106,170 @@
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-1">Email :-</label>
                 <input type="email" name="email" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+
             </div>
-            <div class="mb-6">
-                <label class="block text-xs text-gray-400 mb-1">Password :-</label>
-                <input type="password" name="password" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+        {% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+
+    <form action="{{ url_for('register') }}" method="POST">
+
+        <!-- Role -->
+
+        <div class="mb-4">
+
+            <label class="block text-sm text-gray-300 mb-2">
+                Role
+            </label>
+
+            <select
+            name="role"
+            required
+            class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-3 text-white focus:outline-none focus:border-brandPurple">
+
+                <option value="Employee">Employee</option>
+                <option value="Admin">Admin / HR Officer</option>
+
+            </select>
+
+        </div>
+
+        <!-- Employee ID -->
+
+        <div class="mb-4">
+
+            <label class="block text-sm text-gray-300 mb-2">
+                Employee ID
+            </label>
+
+            <input
+            type="text"
+            name="employee_id"
+            placeholder="OIJODO20220001"
+            required
+            class="w-full bg-transparent border border-gray-600 rounded-lg px-3 py-3 text-white focus:outline-none focus:border-brandPurple">
+
+        </div>
+
+        <!-- Email -->
+
+        <div class="mb-4">
+
+            <label class="block text-sm text-gray-300 mb-2">
+                Email
+            </label>
+
+            <input
+            type="email"
+            name="email"
+            required
+            class="w-full bg-transparent border border-gray-600 rounded-lg px-3 py-3 text-white focus:outline-none focus:border-brandPurple">
+
+        </div>
+
+        <!-- Password -->
+
+        <div class="mb-6">
+
+            <label class="block text-sm text-gray-300 mb-2">
+                Password
+            </label>
+
+            <div class="relative">
+
+                <input
+                id="password"
+                type="password"
+                name="password"
+                required
+                class="w-full bg-transparent border border-gray-600 rounded-lg px-3 py-3 pr-12 text-white focus:outline-none focus:border-brandPurple">
+
+                <button
+                type="button"
+                id="togglePassword"
+                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white">
+
+                    <i id="eyeIcon" class="fa-solid fa-eye"></i>
+
+                </button>
+
             </div>
-            
-            <button type="submit" class="w-full bg-brandPurple hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                Sign Up
-            </button>
-            
-            <div class="text-center mt-4 text-xs">
-                <a href="{{ url_for('login') }}" class="text-gray-400 hover:text-white transition">Already have an account? Sign In</a>
+
+        </div>
+        <div class="mb-6">
+
+            <label class="block text-sm text-gray-300 mb-2">
+                Confirm Password
+            </label>
+
+            <div class="relative">
+
+                <input
+                    id="confirmPassword"
+                    type="password"
+                    name="confirm_password"
+                    required
+                    class="w-full bg-transparent border border-gray-600 rounded-lg px-3 py-3 pr-12 text-white focus:outline-none focus:border-brandPurple">
+
+                <button
+                    type="button"
+                    id="toggleConfirmPassword"
+                    class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white">
+
+                    <i id="confirmEyeIcon" class="fa-solid fa-eye"></i>
+
+                </button>
+
             </div>
-        </form>
+
+            <!-- Password Match Message -->
+            <p id="passwordMessage" class="text-sm mt-2"></p>
+
+        </div>
+
+        <!-- Button -->
+
+        <button
+        type="submit"
+        class="w-full bg-brandPurple hover:bg-purple-700 transition duration-300 text-white font-bold py-3 rounded-lg">
+
+            SIGN UP
+
+        </button>
+
+        <!-- Login -->
+
+        <div class="text-center mt-5">
+
+            <a
+            href="{{ url_for('login') }}"
+            class="text-gray-300 hover:text-white transition">
+
+                Already have an account? Sign In
+
+            </a>
+
+        </div>
+
+    </form>
+
     </div>
+
+<!-- GSAP -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+    gsap.from(".auth-card",{
+        opacity:0,
+        x:80,
+        duration:0.8,
+        ease:"power3.out"
+    });
+    </script>
+
+    <script src="{{ url_for('static', filename='js/registration.js') }}"></script>
+
 </body>
 </html>
