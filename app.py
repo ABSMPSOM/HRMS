@@ -122,6 +122,12 @@ class SalaryRecord(db.Model):
     net_paid = db.Column(db.Float, nullable=False)
     user = db.relationship('User', backref=db.backref('salary_records', order_by='desc(SalaryRecord.payment_date)', lazy=True))
 
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['ATTACHMENT_FOLDER'], exist_ok=True)
+with app.app_context():
+    db.create_all()
+    seed_database()
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -561,9 +567,4 @@ def seed_database():
     db.session.commit()
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['ATTACHMENT_FOLDER'], exist_ok=True)
-    with app.app_context():
-        db.create_all()
-        seed_database()
     app.run(debug=True)
