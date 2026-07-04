@@ -10,12 +10,13 @@
     </script>
     <style>
         body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; }
-        .app-section { display: none; }
-        .app-section.active { display: block; }
+        .app-section, .sub-tab-content { display: none; }
+        .app-section.active, .sub-tab-content.active { display: block; }
         .modal-content { background-color: #1e1e1e; color: white; border: 1px solid #333; }
         .modal-header { border-bottom: 1px solid #333; }
         .modal-footer { border-top: 1px solid #333; }
         .form-control, .form-select { background-color: #2a2a2a; color: white; border: 1px solid #444; }
+        .form-control:focus, .form-select:focus { background-color: #333; color: white; border-color: #b244d4; box-shadow: none; }
     </style>
 </head>
 <body class="bg-darkBg min-h-screen">
@@ -24,8 +25,10 @@
         <div class="flex items-center gap-6">
             <div class="font-bold text-xl tracking-widest mr-4">LOGO</div>
             <div class="flex gap-4 text-sm">
-                <button onclick="switchTab('attendance-tab')" class="hover:text-brandPurple transition text-brandPurple font-bold">Attendance</button>
-                <button onclick="switchTab('timeoff-tab')" class="hover:text-brandPurple transition">Time Off</button>
+                <button onclick="switchTab('employees-tab')" class="hover:text-brandPurple transition" id="btn-employees-tab">Directory</button>
+                <button onclick="switchTab('profile-tab')" class="hover:text-brandPurple transition text-brandPurple font-bold" id="btn-profile-tab">My Profile</button>
+                <button onclick="switchTab('attendance-tab')" class="hover:text-brandPurple transition" id="btn-attendance-tab">Attendance</button>
+                <button onclick="switchTab('timeoff-tab')" class="hover:text-brandPurple transition" id="btn-timeoff-tab">Time Off</button>
             </div>
         </div>
         
@@ -35,8 +38,6 @@
                 <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-xs text-white uppercase">{{ current_user.email[0:2] }}</div>
             </button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background-color: #1e1e1e; border: 1px solid #444;">
-                <li><span class="dropdown-item-text text-xs text-gray-400">ID: {{ current_user.employee_id }}</span></li>
-                <li><hr class="dropdown-divider border-gray-600"></li>
                 <li>
                     <div class="px-3 py-2 flex flex-col gap-2">
                         <form action="{{ url_for('check_in') }}" method="POST">
@@ -60,7 +61,127 @@
             {% endif %}
         {% endwith %}
 
-        <div id="attendance-tab" class="app-section active">
+        <div id="employees-tab" class="app-section">
+            <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">My Team (Directory)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for emp in employees %}
+                <div class="emp-card bg-cardBg border border-gray-700 rounded-lg p-5 flex flex-col relative shadow-md hover:border-gray-500 transition">
+                    <span class="absolute top-3 right-3 text-[10px] font-bold px-2 py-1 bg-gray-800 border border-gray-600 rounded text-gray-300">
+                        {{ emp.branch.name if emp.branch else 'Unassigned' }}
+                    </span>
+                    <div class="flex items-center gap-4 mb-4 mt-2">
+                        <div class="w-14 h-14 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-gray-600 uppercase">
+                            {{ emp.email[0:2] }}
+                        </div>
+                        <div>
+                            <h3 class="text-md font-semibold text-white">{{ emp.employee_id }}</h3>
+                            <p class="text-xs text-brandPurple">{{ emp.role }}</p>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-300 space-y-1 mb-2 border-t border-gray-700 pt-3">
+                        <p><span class="text-gray-500 w-24 inline-block">Email:</span> {{ emp.email }}</p>
+                        <p><span class="text-gray-500 w-24 inline-block">Department:</span> {{ emp.department.name if emp.department else 'N/A' }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500">No peers found in your department.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="profile-tab" class="app-section active">
+            <div class="bg-cardBg border border-gray-700 rounded-lg p-6">
+                <div class="flex gap-8 border-b border-gray-700 pb-6 mb-6">
+                    <div class="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center text-4xl border-4 border-gray-600 uppercase">
+                        {{ current_user.email[0:2] }}
+                    </div>
+                    <div class="flex-grow grid grid-cols-2 gap-4">
+                        <div>
+                            <h2 class="text-3xl font-bold border-b border-gray-600 pb-1 mb-2">{{ current_user.email.split('@')[0] }}</h2>
+                            <p class="text-sm text-gray-400">Login ID: <span class="text-white">{{ current_user.employee_id }}</span></p>
+                            <p class="text-sm text-gray-400">Email: <span class="text-white">{{ current_user.email }}</span></p>
+                        </div>
+                        <div class="text-sm text-gray-400 space-y-2 mt-2">
+                            <p class="border-b border-gray-700 pb-1"><span class="w-24 inline-block">Department:</span> <span class="text-white">{{ current_user.department.name if current_user.department else 'N/A' }}</span></p>
+                            <p class="border-b border-gray-700 pb-1"><span class="w-24 inline-block">Role:</span> <span class="text-white">{{ current_user.role }}</span></p>
+                            <p class="border-b border-gray-700 pb-1"><span class="w-24 inline-block">Location:</span> <span class="text-white">{{ current_user.branch.name if current_user.branch else 'N/A' }}</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 border-b border-gray-700 mb-6">
+                    <button onclick="switchSubTab('private-info')" class="pb-2 border-b-2 border-transparent hover:border-brandPurple transition" id="btn-private-info">Private Info</button>
+                    <button onclick="switchSubTab('salary-info')" class="pb-2 border-b-2 border-brandPurple text-brandPurple font-bold transition" id="btn-salary-info">Salary Info & Payslips</button>
+                </div>
+
+                <div id="private-info" class="sub-tab-content">
+                    <h3 class="text-md font-semibold text-white mb-4">Edit Personal Data</h3>
+                    <form action="{{ url_for('update_profile') }}" method="POST" class="max-w-xl space-y-4">
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Phone Number</label>
+                            <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Enter phone" class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Address</label>
+                            <input type="text" name="address" value="{{ current_user.address or '' }}" placeholder="Enter address" class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+                        </div>
+                        <div class="border-t border-gray-700 pt-4 mt-4">
+                            <label class="text-xs text-red-400 mb-1 block">Update Password (Optional)</label>
+                            <input type="password" name="password" placeholder="Leave blank to keep current password" class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-red-400">
+                        </div>
+                        <button type="submit" class="bg-brandPurple hover:bg-purple-700 text-white text-sm font-bold py-2 px-6 rounded transition">Save Changes</button>
+                    </form>
+                </div>
+
+                <div id="salary-info" class="sub-tab-content active">
+                    <div class="grid grid-cols-2 gap-12 mb-8">
+                        <div>
+                            <div class="flex justify-between border-b border-gray-700 py-2">
+                                <span class="text-gray-400">Month Wage</span>
+                                <span class="font-mono text-white">₹{{ "{:,.2f}".format(current_user.monthly_wage) }} / Month</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-700 py-2">
+                                <span class="text-gray-400">Yearly Wage</span>
+                                <span class="font-mono text-white">₹{{ "{:,.2f}".format(current_user.yearly_wage) }} / Yearly</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-md font-semibold text-white mb-4 border-b border-gray-700 pb-2">Salary History & Slips</h3>
+                    <div class="overflow-x-auto bg-gray-800 rounded-lg border border-gray-700">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-900 border-b border-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium">Month</th>
+                                    <th class="px-4 py-3 font-medium">Gross</th>
+                                    <th class="px-4 py-3 font-medium text-red-400">Deductions</th>
+                                    <th class="px-4 py-3 font-medium text-green-400">Net Paid</th>
+                                    <th class="px-4 py-3 font-medium">Date Issued</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-700">
+                                {% for slip in current_user.salary_records %}
+                                <tr class="hover:bg-gray-700 transition">
+                                    <td class="px-4 py-3 text-white font-semibold">{{ slip.month_year }}</td>
+                                    <td class="px-4 py-3">₹{{ "{:,.2f}".format(slip.gross_salary) }}</td>
+                                    <td class="px-4 py-3 text-red-400">
+                                        ₹{{ "{:,.2f}".format(slip.deductions) }}
+                                        {% if slip.deductions > 0 %} <span class="text-[10px] text-gray-500 block">({{ slip.deduction_reason }})</span> {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-green-400 font-bold">₹{{ "{:,.2f}".format(slip.net_paid) }}</td>
+                                    <td class="px-4 py-3 text-xs text-gray-400">{{ slip.payment_date.strftime('%Y-%m-%d') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No salary records generated yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="attendance-tab" class="app-section">
             <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">My Attendance</h2>
             <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
                 <table class="w-full text-left text-sm whitespace-nowrap">
@@ -79,8 +200,9 @@
                             <td class="px-4 py-3">{{ record.check_out.strftime('%H:%M') if record.check_out else '-' }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">No records found.</td></tr>
-                        {% endfor %} </tbody>
+                        <tr><td colspan=\"3\" class=\"px-4 py-3 text-center text-gray-500\">No records found.</td></tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -110,13 +232,9 @@
                             <td class="px-4 py-3">{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
                             <td class="px-4 py-3">{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
                             <td class="px-4 py-3">
-                                {% if leave.status == 'Approved' %}
-                                    <span class="text-green-500">{{ leave.status }}</span>
-                                {% elif leave.status == 'Rejected' %}
-                                    <span class="text-red-500">{{ leave.status }}</span>
-                                {% else %}
-                                    <span class="text-yellow-500">{{ leave.status }}</span>
-                                {% endif %}
+                                {% if leave.status == 'Approved' %} <span class="text-green-500">{{ leave.status }}</span>
+                                {% elif leave.status == 'Rejected' %} <span class="text-red-500">{{ leave.status }}</span>
+                                {% else %} <span class="text-yellow-500">{{ leave.status }}</span> {% endif %}
                             </td>
                         </tr>
                         {% else %}
@@ -129,35 +247,43 @@
     </div>
 
     <div class="modal fade" id="leaveModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Time off Request</h5>
+                    <h5 class="modal-title">Request Time Off</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('apply_leave') }}" method="POST">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="text-sm text-gray-400 mb-1">Time off Type</label>
+                <form action="{{ url_for('apply_leave') }}" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body space-y-4">
+                        <div>
+                            <label class="text-sm text-gray-400 mb-1 block">Time off Type</label>
                             <select name="leave_type" class="form-select text-blue-400" required>
                                 <option>Paid Time off</option>
                                 <option>Sick Leave</option>
                                 <option>Unpaid Leaves</option>
                             </select>
                         </div>
-                        <div class="mb-3 flex gap-2">
+                        <div class="flex gap-4">
                             <div class="w-1/2">
-                                <label class="text-sm text-gray-400 mb-1">Start Date</label>
+                                <label class="text-sm text-gray-400 mb-1 block">Start Date</label>
                                 <input type="date" name="start_date" class="form-control text-blue-400" required>
                             </div>
                             <div class="w-1/2">
-                                <label class="text-sm text-gray-400 mb-1">End Date</label>
+                                <label class="text-sm text-gray-400 mb-1 block">End Date</label>
                                 <input type="date" name="end_date" class="form-control text-blue-400" required>
                             </div>
                         </div>
+                        <div>
+                            <label class="text-sm text-gray-400 mb-1 block">Message to HR / Reason</label>
+                            <textarea name="message" rows="3" class="form-control text-white" placeholder="Provide additional details regarding your request..."></textarea>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-400 mb-1 block">Attachment (Medical Certificate, etc.)</label>
+                            <input type="file" name="attachment" class="form-control text-blue-400">
+                        </div>
                     </div>
                     <div class="modal-footer border-t border-gray-700">
-                        <button type="submit" class="bg-brandPurple hover:bg-purple-700 text-white text-sm py-1 px-4 rounded">Submit</button>
+                        <button type="submit" class="bg-brandPurple hover:bg-purple-700 text-white text-sm py-2 px-6 rounded">Submit Request</button>
                     </div>
                 </form>
             </div>
@@ -169,6 +295,16 @@
         function switchTab(tabId) {
             document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.top-nav button').forEach(el => el.classList.remove('text-brandPurple', 'font-bold'));
+            document.getElementById('btn-' + tabId).classList.add('text-brandPurple', 'font-bold');
+        }
+
+        function switchSubTab(subTabId) {
+            document.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(subTabId).classList.add('active');
+            document.getElementById('btn-private-info').classList.remove('border-brandPurple', 'text-brandPurple', 'font-bold');
+            document.getElementById('btn-salary-info').classList.remove('border-brandPurple', 'text-brandPurple', 'font-bold');
+            document.getElementById('btn-' + subTabId).classList.add('border-brandPurple', 'text-brandPurple', 'font-bold');
         }
     </script>
 </body>

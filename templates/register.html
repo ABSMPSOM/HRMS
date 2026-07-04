@@ -7,16 +7,15 @@
     <script>
         tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
     </script>
-    <style>body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }</style>
+    <style>body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; }</style>
 </head>
 <body class="bg-darkBg min-h-screen flex items-center justify-center">
 
-    <div class="auth-card bg-cardBg p-8 rounded-lg border border-gray-700 shadow-xl w-full max-w-md">
+    <div class="auth-card bg-cardBg p-8 rounded-lg border border-gray-700 shadow-xl w-full max-w-md my-8">
         <div class="bg-gray-800 text-center py-3 rounded mb-6 text-sm font-semibold tracking-wider">
             APP/WEB LOGO
         </div>
         
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div class="bg-yellow-500 text-black text-xs p-2 rounded mb-4 text-center">
@@ -33,6 +32,32 @@
                     <option value="Admin">Admin / HR Officer</option>
                 </select>
             </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs text-gray-400 mb-1">Branch (Location) :-</label>
+                <select name="branch_id" class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+                    <option value="" selected>Select Branch (Optional)</option>
+                    {% for branch in branches %}
+                        <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.location }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs text-gray-400 mb-1">Department :-</label>
+                <select name="department_id" class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+                    <option value="" selected>Select Department (Optional)</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs text-gray-400 mb-1">Base Monthly Wage (₹) :-</label>
+                <input type="number" step="0.01" name="monthly_wage" class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple" placeholder="50000.00">
+            </div>
+
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-1">Employee ID :-</label>
                 <input type="text" name="employee_id" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple" placeholder="OIJODO20220001">
