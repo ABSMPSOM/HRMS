@@ -49,10 +49,6 @@ instance/
 Thumbs.db
 
 # Database
-instance/
-*.db
-*.sqlite
-*.sqlite3
 
 # Logs
 *.log
