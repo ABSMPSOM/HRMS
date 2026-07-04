@@ -1,6 +1,6 @@
 import os
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
@@ -94,7 +94,7 @@ class User(UserMixin, db.Model):
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    date = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
+    date = db.Column(db.Date, default=lambda: datetime.now().date())
     check_in = db.Column(db.DateTime, nullable=True)
     check_out = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='Present')
@@ -114,7 +114,7 @@ class LeaveRequest(db.Model):
 class SalaryRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    payment_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    payment_date = db.Column(db.DateTime, default=lambda: datetime.now())
     month_year = db.Column(db.String(50), nullable=False)
     gross_salary = db.Column(db.Float, nullable=False)
     deductions = db.Column(db.Float, default=0.0)
@@ -134,11 +134,11 @@ def load_user(user_id):
 def send_otp_email(user):
     otp_code = f"{random.randint(100000, 999999)}"
     user.otp = otp_code
-    user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+    user.otp_expiry = datetime.now() + timedelta(minutes=10)
     db.session.commit()
     
     msg = Message('Your HRMS Security Code', recipients=[user.email])
-    current_year = datetime.now(timezone.utc).year
+    current_year = datetime.now().year
 
     msg.html = f"""
     <!DOCTYPE html>
@@ -232,7 +232,7 @@ def verify_otp():
         if user.otp != request.form.get('otp'):
             flash('Incorrect entry token.')
             return render_template('verify_otp.html', email=email)
-        if datetime.now(timezone.utc).replace(tzinfo=None) > user.otp_expiry:
+        if datetime.now() > user.otp_expiry:
             flash('OTP expired.')
             return redirect(url_for('register'))
         user.is_verified, user.otp, user.otp_expiry = True, None, None
@@ -289,7 +289,7 @@ def api_verify_reset_otp():
     if not user or user.otp != data.get('otp'):
         return jsonify({'success': False, 'message': 'Incorrect OTP.'})
     
-    if datetime.now(timezone.utc).replace(tzinfo=None) > user.otp_expiry:
+    if datetime.now() > user.otp_expiry:
         return jsonify({'success': False, 'message': 'OTP has expired. Please resend.'})
     
     return jsonify({'success': True})
@@ -432,7 +432,7 @@ def process_salary(emp_id):
             </div>
             """
             
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now().year
 
         msg.html = f"""
         <!DOCTYPE html>
@@ -501,18 +501,18 @@ def process_salary(emp_id):
 @app.route('/attendance/check_in', methods=['POST'])
 @login_required
 def check_in():
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now().date()
     if not Attendance.query.filter_by(user_id=current_user.id, date=today).first():
-        db.session.add(Attendance(user_id=current_user.id, check_in=datetime.now(timezone.utc)))
+        db.session.add(Attendance(user_id=current_user.id, check_in=datetime.now()))
         db.session.commit()
     return redirect(url_for('dashboard'))
 
 @app.route('/attendance/check_out', methods=['POST'])
 @login_required
 def check_out():
-    record = Attendance.query.filter_by(user_id=current_user.id, date=datetime.now(timezone.utc).date()).first()
+    record = Attendance.query.filter_by(user_id=current_user.id, date=datetime.now().date()).first()
     if record and not record.check_out:
-        record.check_out = datetime.now(timezone.utc)
+        record.check_out = datetime.now()
         db.session.commit()
     return redirect(url_for('dashboard'))
 
