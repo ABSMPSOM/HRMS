@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>HRMS - Sign In</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
@@ -31,10 +32,42 @@
                 <input type="email" name="email" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple" placeholder="admin@company.com">
             </div>
             <div class="mb-6">
-                <label class="block text-xs text-gray-400 mb-1">Password :-</label>
-                <input type="password" name="password" required class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-brandPurple">
+                <label class="block text-xs text-gray-400 mb-1">
+                    Password :-
+                </label>
+
+                <div class="relative">
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        class="w-full bg-transparent border border-gray-600 rounded px-3 py-2 pr-10 text-white focus:outline-none focus:border-brandPurple">
+
+                        <button
+                            type="button"
+                            id="togglePassword"
+                            class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white">
+
+                            <i class="fa-solid fa-eye" id="eyeIcon"></i>
+
+                        </button>
+                </div>
+            <div class="flex items-center justify-between mb-6">
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        name="remember"
+                        class="w-4 h-4 accent-brandPurple rounded">
+
+                        Remember Me
+                </label>
+
+                <a href="{{ url_for('forgot_password') }}"
+                    class="text-sm text-brandPurple hover:text-purple-300 transition">
+                    Forgot Password?
+                </a>
             </div>
-            
             <button type="submit" class="w-full bg-brandPurple hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                 SIGN IN
             </button>
@@ -48,6 +81,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script>
         gsap.from(".auth-card", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
+    </script>
+    <script>
+        const password = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+        const eyeIcon = document.getElementById("eyeIcon");
+            
+        togglePassword.addEventListener("click", () => {
+            if (password.type === "password") {
+                password.type = "text";
+                eyeIcon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                password.type = "password";
+                eyeIcon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        });
     </script>
 </body>
 </html>
