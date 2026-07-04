@@ -36,9 +36,9 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
-# ==========================================
+
 # MODELS
-# ==========================================
+
 class Branch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -110,30 +110,94 @@ class SalaryRecord(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ==========================================
+
 # UTILS & AUTH ROUTES
-# ==========================================
+
 def send_otp_email(user):
+    
     otp_code = f"{random.randint(100000, 999999)}"
     user.otp = otp_code
     user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
     db.session.commit()
-    msg = Message('Your HRMS Account OTP', recipients=[user.email])
-    msg.body = f'Your secure OTP is: {otp_code}\nExpires in 10 minutes.'
-    mail.send(msg)
+    
+    msg = Message('Your HRMS Security Code', recipients=[user.email])
+    
+    current_year = datetime.now(timezone.utc).year
 
+    
+    msg.html = f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f5; padding: 40px 15px;">
+            <tr>
+                <td align="center">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 500px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+
+                        <tr>
+                            <td style="background-color: #b244d4; padding: 30px; text-align: center; color: #ffffff;">
+                                <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">HRMS Portal</h1>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding: 40px 30px; text-align: center;">
+                                <h2 style="margin-top: 0; color: #333333; font-size: 22px;">Authentication Required</h2>
+                                <p style="color: #555555; font-size: 15px; line-height: 1.6; margin-bottom: 30px;">
+                                    You are receiving this email because a request was made to access your HRMS account. Please use the following security code to complete your request.
+                                </p>
+
+                                <div style="background-color: #fbf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 20px; display: inline-block; margin-bottom: 30px;">
+                                    <p style="margin: 0; font-size: 36px; font-weight: bold; color: #b244d4; letter-spacing: 12px; white-space: nowrap;">{otp_code}</p>
+                                </div>
+
+                                <p style="color: #888888; font-size: 14px; margin: 0;">
+                                    This code will expire in <strong>10 minutes</strong>.
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding: 20px 30px 30px 30px; border-top: 1px solid #eeeeee;">
+                                <p style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6; text-align: center;">
+                                    If you did not request this code, please ignore this email or contact your IT/HR administrator immediately. Your account password may be compromised.<br><br>
+                                    &copy; {current_year} HR Management System. This is an automated message, please do not reply.
+                                </p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    
+    msg.body = f"Your HRMS security code is: {otp_code}. This code will expire in 10 minutes."
+    
+    mail.send(msg)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     branches, departments = Branch.query.all(), Department.query.all()
     if request.method == 'POST':
         email = request.form.get('email')
+        employee_id = request.form.get('employee_id')
+        
+        
         if User.query.filter_by(email=email).first():
             flash('Email already registered.')
             return redirect(url_for('register'))
             
+        
+        if User.query.filter_by(employee_id=employee_id).first():
+            flash('Employee ID is already in use. Please enter a unique ID.')
+            return redirect(url_for('register'))
+            
         new_user = User(
             email=email, 
-            employee_id=request.form.get('employee_id'), 
+            employee_id=employee_id, 
             role=request.form.get('role'), 
             branch_id=request.form.get('branch_id'),
             department_id=request.form.get('department_id'),
@@ -142,6 +206,7 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
+        
         try:
             send_otp_email(new_user)
             flash('Registration successful! Check email for OTP.')
@@ -149,6 +214,7 @@ def register():
         except Exception as e:
             flash(f'Error sending OTP: {str(e)}')
             return redirect(url_for('login'))
+            
     return render_template('register.html', branches=branches, departments=departments)
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
@@ -218,9 +284,9 @@ def reset_password():
         return redirect(url_for('login'))
     return render_template('reset_password.html', email=email)
 
-# ==========================================
-# CORE DASHBOARD & ACCESS RIGHTS LOGIC
-# ==========================================
+
+#  DASHBOARD & ACCESS RIGHTS LOGIC
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -279,9 +345,9 @@ def edit_employee(emp_id):
     flash(f"Successfully updated records for {emp.email}.")
     return redirect(url_for('dashboard'))
 
-# ==========================================
+
 # SALARY DISBURSEMENT & INVOICE ENGINE
-# ==========================================
+
 @app.route('/admin/salary/pay/<int:emp_id>', methods=['POST'])
 @login_required
 def process_salary(emp_id):
@@ -293,7 +359,6 @@ def process_salary(emp_id):
     deductions = float(request.form.get('deductions', 0.0))
     deduction_reason = request.form.get('deduction_reason', '')
     
-    # NEW: Capture the generic HR message
     hr_message = request.form.get('hr_message', '').strip()
     
     gross = emp.monthly_wage
@@ -313,34 +378,95 @@ def process_salary(emp_id):
     try:
         msg = Message(f'Official Payslip & Salary Disbursement - {month_year}', recipients=[emp.email])
         
-        # Build the dynamic email body
-        email_body = f"""Hello {emp.employee_id},
-
-Your salary for {month_year} has been successfully processed by the HR department.
-
-=== PAYSLIP SUMMARY ===
-Base Gross Salary: Rs. {gross:,.2f}
-Deductions:        Rs. {deductions:,.2f}
-"""
-        # Append Deduction Reason if applicable
+        
+        deduction_block = ""
         if deductions > 0:
-            email_body += f"Reason for Deduction: {deduction_reason}\n"
-            
-        # Append the new custom HR Message if they typed one
+            deduction_block = f"""
+            <div style="background-color: #fff5f5; border-left: 4px solid #e53e3e; padding: 15px; margin-bottom: 25px;">
+                <p style="margin: 0; color: #c53030; font-size: 14px;"><strong>Reason for Deduction:</strong> {deduction_reason}</p>
+            </div>
+            """
+
+        
+        message_block = ""
         if hr_message:
-            email_body += f"\n--- Message from HR/Admin ---\n{hr_message}\n"
+            message_block = f"""
+            <div style="background-color: #fbf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
+                <p style="margin: 0 0 10px 0; color: #b244d4; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Message from HR / Admin</p>
+                <p style="margin: 0; color: #555555; font-size: 15px; font-style: italic;">"{hr_message}"</p>
+            </div>
+            """
             
-        email_body += f"""-------------------------
-NET PAID AMOUNT:   Rs. {net_paid:,.2f}
-=========================
+        current_year = datetime.now(timezone.utc).year
 
-The funds should reflect in your registered bank account shortly. 
-If you have any discrepancies, please contact your HR immediately.
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f5; padding: 40px 15px;">
+                <tr>
+                    <td align="center">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            
+                            <!-- Header Area -->
+                            <tr>
+                                <td style="background-color: #b244d4; padding: 35px 30px; text-align: center; color: #ffffff;">
+                                    <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Salary Disbursement</h1>
+                                    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">{month_year}</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content Area -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <p style="margin-top: 0; font-size: 16px; color: #333333;">Hello <strong>{emp.employee_id}</strong>,</p>
+                                    <p style="font-size: 15px; color: #555555; line-height: 1.6;">Your salary for <strong>{month_year}</strong> has been successfully processed by the HR department. Below is the summary of your official payslip.</p>
+                                    
+                                    <!-- Financial Table -->
+                                    <table width="100%" cellpadding="15" cellspacing="0" border="0" style="margin-top: 35px; margin-bottom: 30px; border: 1px solid #eeeeee; border-radius: 6px;">
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eeeeee; color: #555555;">Base Gross Salary</td>
+                                            <td align="right" style="border-bottom: 1px solid #eeeeee; font-weight: bold; color: #333333;">&#8377; {gross:,.2f}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eeeeee; color: #e53e3e;">Total Deductions</td>
+                                            <td align="right" style="border-bottom: 1px solid #eeeeee; font-weight: bold; color: #e53e3e;">- &#8377; {deductions:,.2f}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="background-color: #fcfcfc; font-weight: bold; font-size: 15px; color: #111111;">NET PAID AMOUNT</td>
+                                            <td align="right" style="background-color: #fcfcfc; font-weight: bold; font-size: 20px; color: #22c55e;">&#8377; {net_paid:,.2f}</td>
+                                        </tr>
+                                    </table>
 
-Thank you,
-HR Management System
-"""
-        msg.body = email_body
+                                    <!-- Injection Blocks -->
+                                    {deduction_block}
+                                    {message_block}
+
+                                    <!-- Footer Context -->
+                                    <p style="font-size: 13px; color: #888888; margin-top: 35px; line-height: 1.6; border-top: 1px solid #eeeeee; padding-top: 25px;">
+                                        The funds should reflect in your registered bank account shortly. If you have any discrepancies or questions regarding this payslip, please contact your HR representative immediately.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Bottom Bar -->
+                            <tr>
+                                <td style="background-color: #f9f9f9; padding: 20px; text-align: center; color: #aaaaaa; font-size: 12px;">
+                                    &copy; {current_year} HR Management System. All rights reserved.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        
+        msg.body = f"Salary Processed: Gross: {gross}, Deductions: {deductions}, Net: {net_paid}."
+        
         mail.send(msg)
         flash(f"Salary successfully processed and invoice emailed to {emp.email}.")
     except Exception as e:
@@ -348,9 +474,8 @@ HR Management System
         
     return redirect(url_for('dashboard'))
 
-# ==========================================
 # ATTENDANCE & LEAVE ROUTES
-# ==========================================
+
 @app.route('/attendance/check_in', methods=['POST'])
 @login_required
 def check_in():
@@ -415,3 +540,4 @@ if __name__ == '__main__':
         db.create_all()
         seed_database()
     app.run(debug=True)
+    
