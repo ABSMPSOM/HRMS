@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
+    </script>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; }
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+        .modal-content { background-color: #1e1e1e; color: white; border: 1px solid #333; }
+        .modal-header { border-bottom: 1px solid #333; }
+        .modal-footer { border-top: 1px solid #333; }
+        .form-control, .form-select { background-color: #2a2a2a; color: white; border: 1px solid #444; }
+    </style>
+</head>
+<body class="bg-darkBg min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-cardBg border-b border-gray-700 px-6 py-3 flex justify-between items-center top-nav">
+        <div class="flex items-center gap-6">
+            <div class="font-bold text-xl tracking-widest mr-4">LOGO</div>
+            <div class="flex gap-4 text-sm">
+                <button onclick="switchTab('attendance-tab')" class="hover:text-brandPurple transition text-brandPurple font-bold">Attendance</button>
+                <button onclick="switchTab('timeoff-tab')" class="hover:text-brandPurple transition">Time Off</button>
+            </div>
+        </div>
+        
+        <div class="dropdown">
+            <button class="flex items-center gap-2 border-none bg-transparent focus:outline-none" type="button" data-bs-toggle="dropdown">
+                <span class="w-3 h-3 bg-green-500 rounded-full inline-block"></span>
+                <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-xs text-white uppercase">{{ current_user.email[0:2] }}</div>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background-color: #1e1e1e; border: 1px solid #444;">
+                <li><span class="dropdown-item-text text-xs text-gray-400">ID: {{ current_user.employee_id }}</span></li>
+                <li><hr class="dropdown-divider border-gray-600"></li>
+                <li>
+                    <div class="px-3 py-2 flex flex-col gap-2">
+                        <form action="{{ url_for('check_in') }}" method="POST">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded w-full text-left">Check IN -></button>
+                        </form>
+                        <form action="{{ url_for('check_out') }}" method="POST">
+                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded w-full text-left">Check OUT -></button>
+                        </form>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider border-gray-600"></li>
+                <li><a class="dropdown-item text-sm text-red-400" href="{{ url_for('logout') }}">Log Out</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-brandPurple text-white text-sm p-3 rounded mb-4">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Attendance Section -->
+        <div id="attendance-tab" class="app-section active">
+            <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">My Attendance</h2>
+            <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-800 border-b border-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Date</th>
+                            <th class="px-4 py-3 font-medium">Check In</th>
+                            <th class="px-4 py-3 font-medium">Check Out</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for record in attendance %}
+                        <tr class="hover:bg-gray-800 transition">
+                            <td class="px-4 py-3">{{ record.date.strftime('%Y-%m-%d') }}</td>
+                            <td class="px-4 py-3">{{ record.check_in.strftime('%H:%M') if record.check_in else '-' }}</td>
+                            <td class="px-4 py-3">{{ record.check_out.strftime('%H:%M') if record.check_out else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">No records found.</td></tr>
+                        {% endendfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Time Off Section -->
+        <div id="timeoff-tab" class="app-section">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold border-b-2 border-brandPurple pb-1 inline-block">Time Off Allocation</h2>
+                <button class="bg-brandPurple hover:bg-purple-700 text-white text-sm font-bold py-1 px-4 rounded transition" data-bs-toggle="modal" data-bs-target="#leaveModal">
+                    NEW REQUEST
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-800 border-b border-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Type</th>
+                            <th class="px-4 py-3 font-medium">Start Date</th>
+                            <th class="px-4 py-3 font-medium">End Date</th>
+                            <th class="px-4 py-3 font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for leave in leaves %}
+                        <tr class="hover:bg-gray-800 transition">
+                            <td class="px-4 py-3 text-blue-400">{{ leave.leave_type }}</td>
+                            <td class="px-4 py-3">{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td class="px-4 py-3">{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td class="px-4 py-3">
+                                {% if leave.status == 'Approved' %}
+                                    <span class="text-green-500">{{ leave.status }}</span>
+                                {% elif leave.status == 'Rejected' %}
+                                    <span class="text-red-500">{{ leave.status }}</span>
+                                {% else %}
+                                    <span class="text-yellow-500">{{ leave.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No leave requests.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Modal -->
+    <div class="modal fade" id="leaveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Time off Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('apply_leave') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-400 mb-1">Time off Type</label>
+                            <select name="leave_type" class="form-select text-blue-400" required>
+                                <option>Paid Time off</option>
+                                <option>Sick Leave</option>
+                                <option>Unpaid Leaves</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 flex gap-2">
+                            <div class="w-1/2">
+                                <label class="text-sm text-gray-400 mb-1">Start Date</label>
+                                <input type="date" name="start_date" class="form-control text-blue-400" required>
+                            </div>
+                            <div class="w-1/2">
+                                <label class="text-sm text-gray-400 mb-1">End Date</label>
+                                <input type="date" name="end_date" class="form-control text-blue-400" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-t border-gray-700">
+                        <button type="submit" class="bg-brandPurple hover:bg-purple-700 text-white text-sm py-1 px-4 rounded">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>

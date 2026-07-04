@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HRMS - Verify Identity Access Token</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
+    </script>
+    <style>body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }</style>
+</head>
+<body class="bg-darkBg min-h-screen flex items-center justify-center">
+
+    <div class="auth-card bg-cardBg p-8 rounded-lg border border-gray-700 shadow-xl w-full max-w-md text-center">
+        <div class="bg-gray-800 py-3 rounded mb-6 text-sm font-semibold tracking-wider">
+            SECURITY VERIFICATION
+        </div>
+        
+        <h2 class="text-base font-medium mb-2 text-white">Enter Security Verification Pin Code</h2>
+        <p class="text-xs text-gray-400 mb-6">A time-sensitive security token was delivered to <span class="text-brandPurple font-semibold">{{ email }}</span>.</p>
+
+        <!-- Flash Message Handler UI Display Block Components -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-red-500/20 border border-red-500 text-red-300 text-xs p-2 rounded mb-4">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('verify_otp', email=email) }}" method="POST">
+            <div class="mb-6">
+                <input type="text" name="otp" maxLength="6" required autocomplete="off"
+                       class="w-full tracking-[1.5em] text-center font-mono font-bold text-xl bg-transparent border border-gray-600 rounded px-3 py-3 text-white focus:outline-none focus:border-brandPurple" 
+                       placeholder="000000">
+            </div>
+            
+            <button type="submit" class="w-full bg-brandPurple hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                VERIFY ACCOUNT ACCESS
+            </button>
+            
+            <div class="mt-4 text-xs">
+                <a href="{{ url_for('register') }}" class="text-gray-500 hover:text-white transition">Cancel and return to Sign Up</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script>
+        gsap.from(".auth-card", { scale: 0.95, opacity: 0, duration: 0.6, ease: "power2.out" });
+    </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { darkBg: '#121212', cardBg: '#1e1e1e', brandPurple: '#b244d4' } } } }
+    </script>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; }
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+    </style>
+</head>
+<body class="bg-darkBg min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-cardBg border-b border-gray-700 px-6 py-3 flex justify-between items-center top-nav">
+        <div class="flex items-center gap-6">
+            <div class="font-bold text-xl tracking-widest mr-4 text-brandPurple">ADMIN LOGO</div>
+            <div class="flex gap-4 text-sm">
+                <button onclick="switchTab('employees-tab')" class="hover:text-brandPurple transition">Employees</button>
+                <button onclick="switchTab('attendance-tab')" class="hover:text-brandPurple transition">Global Attendance</button>
+                <button onclick="switchTab('timeoff-tab')" class="hover:text-brandPurple transition">Leave Approvals</button>
+            </div>
+        </div>
+        
+        <div>
+            <a href="{{ url_for('logout') }}" class="text-sm text-red-400 border border-red-400 px-3 py-1 rounded hover:bg-red-400 hover:text-white transition">Logout Admin</a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-brandPurple text-white text-sm p-3 rounded mb-4">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Employees Roster -->
+        <div id="employees-tab" class="app-section active">
+            <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">Directory</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {% for emp in employees %}
+                <div class="emp-card bg-cardBg border border-gray-700 rounded-lg p-4 flex flex-col items-center">
+                    <div class="w-16 h-16 bg-gray-600 rounded-full mb-3 flex items-center justify-center text-white text-xl">
+                        {{ emp.email[0:2]|upper }}
+                    </div>
+                    <h3 class="text-sm font-semibold">{{ emp.employee_id }}</h3>
+                    <p class="text-xs text-gray-400">{{ emp.email }}</p>
+                </div>
+                {% else %}
+                <p class="text-gray-500">No employees registered yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Global Attendance -->
+        <div id="attendance-tab" class="app-section">
+            <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">Global Attendance</h2>
+            <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-800 border-b border-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Employee</th>
+                            <th class="px-4 py-3 font-medium">Date</th>
+                            <th class="px-4 py-3 font-medium">Check In</th>
+                            <th class="px-4 py-3 font-medium">Check Out</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for record in attendance %}
+                        <tr class="hover:bg-gray-800 transition">
+                            <td class="px-4 py-3">{{ record.user.email }}</td>
+                            <td class="px-4 py-3">{{ record.date.strftime('%Y-%m-%d') }}</td>
+                            <td class="px-4 py-3">{{ record.check_in.strftime('%H:%M') if record.check_in else '-' }}</td>
+                            <td class="px-4 py-3">{{ record.check_out.strftime('%H:%M') if record.check_out else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No records found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Time Off Approvals -->
+        <div id="timeoff-tab" class="app-section">
+            <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">Leave Approvals</h2>
+            <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-800 border-b border-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Employee</th>
+                            <th class="px-4 py-3 font-medium">Dates</th>
+                            <th class="px-4 py-3 font-medium">Type</th>
+                            <th class="px-4 py-3 font-medium">Status / Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for leave in leaves %}
+                        <tr class="hover:bg-gray-800 transition">
+                            <td class="px-4 py-3">{{ leave.user.email }}</td>
+                            <td class="px-4 py-3">{{ leave.start_date.strftime('%Y-%m-%d') }} to {{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td class="px-4 py-3 text-blue-400">{{ leave.leave_type }}</td>
+                            <td class="px-4 py-3">
+                                {% if leave.status == 'Pending' %}
+                                <div class="flex gap-2">
+                                    <form action="{{ url_for('leave_action', leave_id=leave.id) }}" method="POST">
+                                        <input type="hidden" name="status" value="Approved">
+                                        <button class="bg-green-600 hover:bg-green-500 w-6 h-6 rounded text-white font-bold text-xs" title="Approve">✓</button>
+                                    </form>
+                                    <form action="{{ url_for('leave_action', leave_id=leave.id) }}" method="POST">
+                                        <input type="hidden" name="status" value="Rejected">
+                                        <button class="bg-red-600 hover:bg-red-500 w-6 h-6 rounded text-white font-bold text-xs" title="Reject">✕</button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                    <span class="text-gray-400">{{ leave.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No requests pending.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
