@@ -16,6 +16,12 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback_secret_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hrms.db'
 
+# ==========================================
+# FILE UPLOAD CONFIGURATION (PICTURE PATH)
+# ==========================================
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'profile_pics')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max 16MB upload limit
+
 # SMTP Setup securely parsed from environment variables
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -32,7 +38,7 @@ login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 # ==========================================
-# REVISED MODELS
+# MODELS
 # ==========================================
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,6 +49,9 @@ class User(UserMixin, db.Model):
     address = db.Column(db.String(250), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     
+    # Profile Picture Link
+    profile_picture = db.Column(db.String(255), nullable=True, default='default.png')
+    
     # Secure Verification Columns
     is_verified = db.Column(db.Boolean, default=False, nullable=False)
     otp = db.Column(db.String(6), nullable=True)
@@ -51,7 +60,6 @@ class User(UserMixin, db.Model):
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    # Fixed DeprecationWarning by using timezone aware UTC
     date = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     check_in = db.Column(db.DateTime, nullable=True)
     check_out = db.Column(db.DateTime, nullable=True)
@@ -69,7 +77,6 @@ class LeaveRequest(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Fixed Legacy API warning (User.query.get is deprecated)
     return db.session.get(User, int(user_id))
 
 # ==========================================
@@ -79,7 +86,6 @@ def send_otp_email(user):
     """Generates a secure numeric token and dispatches it over SMTP."""
     otp_code = f"{random.randint(100000, 999999)}"
     user.otp = otp_code
-    # Token valid for a 10 minute window frame
     user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
     db.session.commit()
     
@@ -93,7 +99,7 @@ This operational verification key will expire automatically in 10 minutes.
     mail.send(msg)
 
 # ==========================================
-# SEAMLESS AUTH ROTATION ROUTES
+# AUTHENTICATION ROUTES
 # ==========================================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -142,13 +148,11 @@ def verify_otp():
             flash('Incorrect entry token code value.')
             return render_template('verify_otp.html', email=email)
             
-        # SQLite stores naive datetimes, so we strip the tzinfo from current time for comparison
         current_time = datetime.now(timezone.utc).replace(tzinfo=None)
         if current_time > user.otp_expiry:
             flash('The verification code has expired. Use the register system to re-issue standard authorization tokens.')
             return redirect(url_for('register'))
             
-        # Target verification criteria met smoothly
         user.is_verified = True
         user.otp = None 
         user.otp_expiry = None
@@ -165,6 +169,10 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        
+        # Determine if the Remember Me checkbox was checked
+        remember = True if request.form.get('remember') else False
+        
         user = User.query.filter_by(email=email).first()
         
         if not user or not check_password_hash(user.password_hash, password):
@@ -175,8 +183,10 @@ def login():
             flash('Your identity verification pipeline is incomplete. Check email or complete target authentication routing.')
             return redirect(url_for('verify_otp', email=user.email))
             
-        login_user(user)
+        # Trigger the login session, passing the remember parameter to generate the persistent cookie
+        login_user(user, remember=remember)
         return redirect(url_for('dashboard'))
+        
     return render_template('login.html')
 
 @app.route('/logout')
@@ -186,7 +196,68 @@ def logout():
     return redirect(url_for('login'))
 
 # ==========================================
-# CORE REDIRECT ROUTING DASHBOARD LOGIC
+# PASSWORD RESET ROUTES
+# ==========================================
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Handles the request to send an OTP for password reset."""
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            try:
+                send_otp_email(user)
+                flash('A password reset OTP has been sent to your email.')
+                return redirect(url_for('reset_password', email=user.email))
+            except Exception as e:
+                flash(f'Failed to send OTP email: {str(e)}')
+        else:
+            flash('No account found with that email address.')
+            
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """Verifies the OTP and updates the user's password."""
+    email = request.args.get('email') or request.form.get('email')
+    
+    if not email:
+        flash('Invalid request. Please start the password reset process again.')
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        submitted_otp = request.form.get('otp')
+        new_password = request.form.get('new_password')
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            flash('User not found.')
+            return redirect(url_for('login'))
+            
+        if user.otp != submitted_otp:
+            flash('Incorrect OTP code.')
+            return render_template('reset_password.html', email=email)
+            
+        current_time = datetime.now(timezone.utc).replace(tzinfo=None)
+        if current_time > user.otp_expiry:
+            flash('The OTP has expired. Please request a new one.')
+            return redirect(url_for('forgot_password'))
+            
+        # Success - Hash the new password and clear the OTP fields
+        user.password_hash = generate_password_hash(new_password, method='pbkdf2:sha256')
+        user.otp = None
+        user.otp_expiry = None
+        db.session.commit()
+        
+        flash('Your password has been successfully reset! You can now log in.')
+        return redirect(url_for('login'))
+        
+    return render_template('reset_password.html', email=email)
+
+
+# ==========================================
+# CORE DASHBOARD & LOGIC ROUTES
 # ==========================================
 @app.route('/dashboard')
 @login_required
@@ -201,9 +272,6 @@ def dashboard():
         my_leaves = LeaveRequest.query.filter_by(user_id=current_user.id).all()
         return render_template('employee_dashboard.html', attendance=my_attendance, leaves=my_leaves)
 
-# ==========================================
-# MISSING APP LOGIC ROUTES (Restored)
-# ==========================================
 @app.route('/attendance/check_in', methods=['POST'])
 @login_required
 def check_in():
@@ -258,6 +326,9 @@ def leave_action(leave_id):
     return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
+    # Ensure the upload folder exists before the app starts
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
     with app.app_context():
         db.create_all()
     app.run(debug=True)
