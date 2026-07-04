@@ -1,6 +1,6 @@
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 from flask import Flask, render_template, request, redirect, flash, url_for
@@ -51,7 +51,8 @@ class User(UserMixin, db.Model):
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    date = db.Column(db.Date, default=datetime.utcnow().date)
+    # Fixed DeprecationWarning by using timezone aware UTC
+    date = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     check_in = db.Column(db.DateTime, nullable=True)
     check_out = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='Present')
@@ -68,7 +69,8 @@ class LeaveRequest(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    # Fixed Legacy API warning (User.query.get is deprecated)
+    return db.session.get(User, int(user_id))
 
 # ==========================================
 # OTP UTILITY FUNCTION
@@ -78,7 +80,7 @@ def send_otp_email(user):
     otp_code = f"{random.randint(100000, 999999)}"
     user.otp = otp_code
     # Token valid for a 10 minute window frame
-    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
+    user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
     db.session.commit()
     
     msg = Message('Your HRMS Account OTP Verification Code', recipients=[user.email])
@@ -140,7 +142,9 @@ def verify_otp():
             flash('Incorrect entry token code value.')
             return render_template('verify_otp.html', email=email)
             
-        if datetime.utcnow() > user.otp_expiry:
+        # SQLite stores naive datetimes, so we strip the tzinfo from current time for comparison
+        current_time = datetime.now(timezone.utc).replace(tzinfo=None)
+        if current_time > user.otp_expiry:
             flash('The verification code has expired. Use the register system to re-issue standard authorization tokens.')
             return redirect(url_for('register'))
             
@@ -168,7 +172,7 @@ def login():
             return redirect(url_for('login'))
             
         if not user.is_verified:
-            flash('Your identity verification verification pipeline is incomplete. Check email or complete target authentication routing.')
+            flash('Your identity verification pipeline is incomplete. Check email or complete target authentication routing.')
             return redirect(url_for('verify_otp', email=user.email))
             
         login_user(user)
@@ -197,9 +201,63 @@ def dashboard():
         my_leaves = LeaveRequest.query.filter_by(user_id=current_user.id).all()
         return render_template('employee_dashboard.html', attendance=my_attendance, leaves=my_leaves)
 
-# (Remaining attendance/leave logic endpoints match folder structures cleanly...)
+# ==========================================
+# MISSING APP LOGIC ROUTES (Restored)
+# ==========================================
+@app.route('/attendance/check_in', methods=['POST'])
+@login_required
+def check_in():
+    today = datetime.now(timezone.utc).date()
+    record = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    if not record:
+        new_record = Attendance(user_id=current_user.id, check_in=datetime.now(timezone.utc))
+        db.session.add(new_record)
+        db.session.commit()
+        flash('Successfully Checked In.')
+    else:
+        flash('Already Checked In Today.')
+    return redirect(url_for('dashboard'))
+
+@app.route('/attendance/check_out', methods=['POST'])
+@login_required
+def check_out():
+    today = datetime.now(timezone.utc).date()
+    record = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    if record and not record.check_out:
+        record.check_out = datetime.now(timezone.utc)
+        db.session.commit()
+        flash('Successfully Checked Out.')
+    elif not record:
+        flash('Please Check In first.')
+    else:
+        flash('Already Checked Out Today.')
+    return redirect(url_for('dashboard'))
+
+@app.route('/leave/apply', methods=['POST'])
+@login_required
+def apply_leave():
+    leave_type = request.form.get('leave_type')
+    start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
+    end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
+    
+    new_leave = LeaveRequest(user_id=current_user.id, leave_type=leave_type, start_date=start_date, end_date=end_date)
+    db.session.add(new_leave)
+    db.session.commit()
+    flash('Leave request submitted.')
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/leave/action/<int:leave_id>', methods=['POST'])
+@login_required
+def leave_action(leave_id):
+    if current_user.role != 'Admin':
+        return "Unauthorized", 403
+    leave = LeaveRequest.query.get_or_404(leave_id)
+    leave.status = request.form.get('status') # 'Approved' or 'Rejected'
+    db.session.commit()
+    flash(f'Leave request {leave.status}.')
+    return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
     with app.app_context():
-        # NOTE: If columns structural conflict patterns occur, wipe instance/hrms.db completely to overwrite schema structural components safely.
         db.create_all()
     app.run(debug=True)

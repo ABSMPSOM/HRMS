@@ -20,7 +20,6 @@
 </head>
 <body class="bg-darkBg min-h-screen">
 
-    <!-- Navbar -->
     <nav class="bg-cardBg border-b border-gray-700 px-6 py-3 flex justify-between items-center top-nav">
         <div class="flex items-center gap-6">
             <div class="font-bold text-xl tracking-widest mr-4">LOGO</div>
@@ -55,14 +54,12 @@
     </nav>
 
     <div class="container mx-auto p-6">
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div class="bg-brandPurple text-white text-sm p-3 rounded mb-4">{{ messages[0] }}</div>
             {% endif %}
         {% endwith %}
 
-        <!-- Attendance Section -->
         <div id="attendance-tab" class="app-section active">
             <h2 class="text-xl font-semibold mb-4 border-b-2 border-brandPurple pb-1 inline-block">My Attendance</h2>
             <div class="overflow-x-auto bg-cardBg border border-gray-700 rounded-lg">
@@ -83,13 +80,11 @@
                         </tr>
                         {% else %}
                         <tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">No records found.</td></tr>
-                        {% endendfor %}
-                    </tbody>
+                        {% endfor %} </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Time Off Section -->
         <div id="timeoff-tab" class="app-section">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-semibold border-b-2 border-brandPurple pb-1 inline-block">Time Off Allocation</h2>
@@ -133,7 +128,6 @@
         </div>
     </div>
 
-    <!-- Leave Modal -->
     <div class="modal fade" id="leaveModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
