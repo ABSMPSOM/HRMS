@@ -4,7 +4,7 @@ venv/
 env/
 ENV/
 .env/
-.env.example/
+.env.example
 
 # Python
 __pycache__/
@@ -36,6 +36,7 @@ instance/
 # Environment
 .env
 .env.local
+.env.example
 .flaskenv
 
 # IDE
