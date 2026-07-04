@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Initial Animations
+    gsap.to("#forgot-card", { duration: 0.7, y: 0, opacity: 1, ease: "power3.out" });
+    gsap.from(".gsap-element", { duration: 0.6, y: 15, opacity: 0, stagger: 0.1, ease: "power2.out", delay: 0.2 });
 
     // ===============================
     // Card Animation
@@ -24,6 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===============================
     const sendOtpBtn = document.getElementById("sendOtpBtn");
     const otpSection = document.getElementById("otpSection");
+    
+    const otpInput = document.getElementById("otp");
+    const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+    const resetSection = document.getElementById("resetSection");
 
     if (sendOtpBtn && otpSection) {
 
