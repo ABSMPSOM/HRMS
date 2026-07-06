@@ -16,9 +16,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'super_secure_fallback_key_2026')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hrms.db'
 
-# ==========================================
+
 # SECURITY: SECURE UPLOAD CONFIGURATION
-# ==========================================
+
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'profile_pics')
 app.config['ATTACHMENT_FOLDER'] = os.path.join(app.root_path, 'static', 'attachments')
 
@@ -33,9 +33,9 @@ def allowed_file(filename, allowed_set):
     """Verifies that the uploaded file has a safe extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_set
 
-# ==========================================
+
 # SMTP SETUP
-# ==========================================
+
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
@@ -51,9 +51,9 @@ login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 
-# ==========================================
+
 # MODELS
-# ==========================================
+
 class Branch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -128,9 +128,9 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-# ==========================================
+
 # UTILS & AUTH ROUTES
-# ==========================================
+
 def send_otp_email(user):
     otp_code = f"{random.randint(100000, 999999)}"
     user.otp = otp_code
@@ -263,9 +263,9 @@ def logout():
     return redirect(url_for('login'))
 
 
-# ==========================================
+
 # SINGLE PAGE FORGOT PASSWORD LOGIC (APIs)
-# ==========================================
+
 @app.route('/forgot-password', methods=['GET'])
 def forgot_password():
     return render_template('forgot_password.html')
@@ -309,9 +309,9 @@ def api_reset_password():
     return jsonify({'success': True, 'redirect': url_for('login')})
 
 
-# ==========================================
+
 # DASHBOARD & PROFILE LOGIC
-# ==========================================
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -364,6 +364,139 @@ def update_profile():
         else:
             flash("Security Alert: Invalid image format. Please upload JPG, PNG, or WEBP.", "error")
             return redirect(url_for('dashboard'))
+
+    db.session.commit()
+    flash("Your profile details have been successfully updated.")
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/employee/edit/<int:emp_id>', methods=['POST'])
+@login_required
+def edit_employee(emp_id):
+    if current_user.role != 'Admin':
+        return redirect(url_for('dashboard'))
+        
+    emp = User.query.get_or_404(emp_id)
+    emp.name = request.form.get('name') or emp.name
+    emp.role = request.form.get('role', emp.role)
+    emp.branch_id = request.form.get('branch_id') or None
+    emp.department_id = request.form.get('department_id') or None
+    emp.monthly_wage = request.form.get('monthly_wage', type=float, default=emp.monthly_wage)
+    
+    db.session.commit()
+    flash(f"Successfully updated records for {emp.email}.")
+    return redirect(url_for('dashboard'))
+
+
+
+# SALARY DISBURSEMENT & INVOICE ENGINE
+
+@app.route('/admin/salary/pay/<int:emp_id>', methods=['POST'])
+@login_required
+def process_salary(emp_id):
+    if current_user.role != 'Admin':
+        return redirect(url_for('dashboard'))
+        
+    emp = User.query.get_or_404(emp_id)
+    month_year = request.form.get('month_year')
+    deductions = float(request.form.get('deductions', 0.0))
+    deduction_reason = request.form.get('deduction_reason', '')
+    hr_message = request.form.get('hr_message', '').strip()
+    
+    gross = emp.monthly_wage
+    net_paid = gross - deductions
+    
+    record = SalaryRecord(
+        user_id=emp.id, month_year=month_year, gross_salary=gross, 
+        deductions=deductions, deduction_reason=deduction_reason, net_paid=net_paid
+    )
+    db.session.add(record)
+    db.session.commit()
+    
+    try:
+        msg = Message(f'Official Payslip & Salary Disbursement - {month_year}', recipients=[emp.email])
+        
+        deduction_block = ""
+        if deductions > 0:
+            deduction_block = f"""
+            <div style="background-color: #fff5f5; border-left: 4px solid #e53e3e; padding: 15px; margin-bottom: 25px;">
+                <p style="margin: 0; color: #c53030; font-size: 14px;"><strong>Reason for Deduction:</strong> {deduction_reason}</p>
+            </div>
+            """
+
+        message_block = ""
+        if hr_message:
+            message_block = f"""
+            <div style="background-color: #fbf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
+                <p style="margin: 0 0 10px 0; color: #b244d4; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Message from HR / Admin</p>
+                <p style="margin: 0; color: #555555; font-size: 15px; font-style: italic;">"{hr_message}"</p>
+            </div>
+            """
+            
+        current_year = datetime.now().year
+
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f5; padding: 40px 15px;">
+                <tr>
+                    <td align="center">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            <tr>
+                                <td style="background-color: #b244d4; padding: 35px 30px; text-align: center; color: #ffffff;">
+                                    <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Salary Disbursement</h1>
+                                    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">{month_year}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <p style="margin-top: 0; font-size: 16px; color: #333333;">Hello <strong>{emp.employee_id}</strong>,</p>
+                                    <p style="font-size: 15px; color: #555555; line-height: 1.6;">Your salary for <strong>{month_year}</strong> has been successfully processed by the HR department. Below is the summary of your official payslip.</p>
+                                    <table width="100%" cellpadding="15" cellspacing="0" border="0" style="margin-top: 35px; margin-bottom: 30px; border: 1px solid #eeeeee; border-radius: 6px;">
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eeeeee; color: #555555;">Base Gross Salary</td>
+                                            <td align="right" style="border-bottom: 1px solid #eeeeee; font-weight: bold; color: #333333;">&#8377; {gross:,.2f}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eeeeee; color: #e53e3e;">Total Deductions</td>
+                                            <td align="right" style="border-bottom: 1px solid #eeeeee; font-weight: bold; color: #e53e3e;">- &#8377; {deductions:,.2f}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="background-color: #fcfcfc; font-weight: bold; font-size: 15px; color: #111111;">NET PAID AMOUNT</td>
+                                            <td align="right" style="background-color: #fcfcfc; font-weight: bold; font-size: 20px; color: #22c55e;">&#8377; {net_paid:,.2f}</td>
+                                        </tr>
+                                    </table>
+                                    {deduction_block}
+                                    {message_block}
+                                    <p style="font-size: 13px; color: #888888; margin-top: 35px; line-height: 1.6; border-top: 1px solid #eeeeee; padding-top: 25px;">
+                                        The funds should reflect in your registered bank account shortly. If you have any discrepancies or questions regarding this payslip, please contact your HR representative immediately.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9; padding: 20px; text-align: center; color: #aaaaaa; font-size: 12px;">
+                                    &copy; {current_year} HR Management System. All rights reserved.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        msg.body = f"Salary Processed: Gross: {gross}, Deductions: {deductions}, Net: {net_paid}."
+        
+        mail.send(msg)
+        flash(f"Salary successfully processed and invoice emailed to {emp.email}.")
+    except Exception as e:
+        flash(f"Salary logged, but failed to send email invoice: {str(e)}")
+        
+    return redirect(url_for('dashboard'))
+
+
+# ATTENDANCE & LEAVE ROUTES
 
     db.session.commit()
     flash("Your profile details have been successfully updated.")
